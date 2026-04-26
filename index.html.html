@@ -1,0 +1,116 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>話題広げ君</title>
+<style>
+*{box-sizing:border-box}
+body{margin:0;font-family:-apple-system,BlinkMacSystemFont,"Helvetica Neue",Arial,sans-serif;background:#0f172a;color:#0f172a}
+.app{max-width:430px;min-height:100vh;margin:0 auto;background:#f8fafc;padding:22px}
+.hero{padding:28px 4px}.badge{display:inline-block;background:#dbeafe;color:#1d4ed8;padding:8px 12px;border-radius:999px;font-size:13px;font-weight:700}
+h1{font-size:38px;line-height:1.1;margin:18px 0 10px}.lead{font-size:15px;color:#475569;line-height:1.7;margin:0}
+.card{background:#fff;border:1px solid #e2e8f0;border-radius:24px;padding:20px;margin:16px 0;box-shadow:0 12px 28px rgba(15,23,42,.08)}
+.btn{width:100%;border:0;border-radius:18px;background:#2563eb;color:#fff;font-size:18px;font-weight:800;padding:17px;margin-top:12px}
+.btn.secondary{background:#e2e8f0;color:#0f172a}.btn.secondary.active{background:#2563eb;color:#fff}.btn.danger{background:#fee2e2;color:#991b1b}
+.progress{font-size:14px;color:#475569;line-height:1.8}.pref{font-size:13px;color:#64748b;font-weight:700;margin-bottom:6px}
+.qtitle{font-size:24px;font-weight:900;line-height:1.35;margin:8px 0 18px}
+.choice{width:100%;text-align:left;background:#fff;border:2px solid #e2e8f0;border-radius:16px;padding:16px;margin:10px 0;font-size:16px;font-weight:800;color:#0f172a}
+.choice.selected{border-color:#2563eb;background:#eff6ff}.result-ok{color:#15803d;font-weight:900}.result-ng{color:#dc2626;font-weight:900}
+.info{background:#f8fafc;border:1px solid #e2e8f0;border-radius:16px;padding:14px;margin-top:14px}.info h4{margin:0 0 8px;font-size:15px}.info ul{margin:8px 0 0;padding-left:22px;color:#475569;line-height:1.7}
+.score-card{text-align:center;padding:24px 20px}
+.result-pref{display:inline-block;background:#eef2ff;color:#3730a3;padding:8px 14px;border-radius:999px;font-size:14px;font-weight:900;margin-bottom:14px}
+.score-wrap{display:flex;justify-content:center;margin:14px 0}
+.score-circle{width:148px;height:148px;border-radius:50%;display:flex;align-items:center;justify-content:center;background:conic-gradient(#2563eb var(--score-deg), #e2e8f0 0deg);box-shadow:0 14px 30px rgba(37,99,235,.18)}
+.score-inner{width:108px;height:108px;border-radius:50%;background:#fff;display:flex;align-items:center;justify-content:center;flex-direction:column;box-shadow:inset 0 0 0 1px #e2e8f0}
+.score-number{font-size:30px;font-weight:1000;color:#0f172a;line-height:1}
+.score-label{font-size:12px;font-weight:800;color:#64748b;margin-top:6px}
+.score-message{font-size:16px;font-weight:900;color:#0f172a;margin:12px 0 0;line-height:1.5}
+.hidden{display:none}
+</style>
+</head>
+<body>
+<div class="app">
+<section id="home"><div class="hero"><span class="badge">コミュニケーション力向上APP</span><h1>話題広げ君</h1><p class="lead">都道府県 × 有名人 × 食べ物 × 名所をクイズで覚える</p></div><div class="card"><div class="progress" id="progressText"></div><button class="btn" onclick="startQuiz()">開始する</button><button class="btn danger" onclick="resetHistory()">履歴をリセット</button></div></section>
+<section id="quiz" class="hidden"><div class="card"><div class="pref" id="quizPref"></div><div class="qtitle" id="questionText"></div><div id="choices"></div><button class="btn secondary" id="nextBtn" onclick="nextQuestion()" disabled>次へ</button></div></section>
+<section id="result" class="hidden"><h2>答え合わせ</h2><div id="resultSummary"></div><div id="resultList"></div><button class="btn" onclick="startQuiz()">他の都道府県に進む</button><button class="btn secondary" onclick="goHome()">トップページに戻る</button></section>
+</div>
+<script>
+const DATA={
+"北海道":{people:["玉置浩二","大泉洋","中島みゆき","GLAY"],foods:["ジンギスカン","海鮮丼","味噌ラーメン","スープカレー"],places:["札幌時計台","小樽運河","函館山","旭山動物園"]},
+"青森県":{people:["吉幾三","新山千春","松山ケンイチ","古坂大魔王"],foods:["せんべい汁","りんご","大間まぐろ","いちご煮"],places:["弘前城","奥入瀬渓流","ねぶたの家ワ・ラッセ","十和田湖"]},
+"岩手県":{people:["大谷翔平","宮沢賢治","福田こうへい","千昌夫"],foods:["わんこそば","盛岡冷麺","じゃじゃ麺","南部せんべい"],places:["中尊寺","小岩井農場","龍泉洞","浄土ヶ浜"]},
+"宮城県":{people:["羽生結弦","さとう宗幸","中村雅俊","荒木飛呂彦"],foods:["牛タン","ずんだ餅","笹かまぼこ","はらこ飯"],places:["松島","仙台城跡","瑞鳳殿","秋保温泉"]},
+"秋田県":{people:["佐々木希","柳葉敏郎","藤あや子","高橋優"],foods:["きりたんぽ","稲庭うどん","比内地鶏","いぶりがっこ"],places:["角館武家屋敷","乳頭温泉郷","田沢湖","男鹿半島"]},
+"山形県":{people:["ウド鈴木","あき竹城","渡辺えり","峯田和伸"],foods:["芋煮","さくらんぼ","米沢牛","冷やしラーメン"],places:["山寺","銀山温泉","蔵王温泉","羽黒山"]},
+"福島県":{people:["西田敏行","梅沢富美男","伊東美咲","GReeeeN"],foods:["喜多方ラーメン","円盤餃子","桃","こづゆ"],places:["鶴ヶ城","大内宿","五色沼","スパリゾートハワイアンズ"]},
+"茨城県":{people:["石井竜也","渡辺直美","カミナリ","磯山さやか"],foods:["納豆","あんこう鍋","メロン","常陸牛"],places:["偕楽園","国営ひたち海浜公園","袋田の滝","鹿島神宮"]},
+"栃木県":{people:["斉藤和義","U字工事","大島優子","森昌子"],foods:["宇都宮餃子","佐野ラーメン","いちご","湯葉"],places:["日光東照宮","華厳の滝","那須高原","あしかがフラワーパーク"]},
+"群馬県":{people:["布袋寅泰","氷室京介","中山秀征","井森美幸"],foods:["焼きまんじゅう","水沢うどん","こんにゃく","峠の釜めし"],places:["草津温泉","富岡製糸場","伊香保温泉","榛名神社"]},
+"埼玉県":{people:["星野源","椎名林檎","所ジョージ","反町隆史"],foods:["草加せんべい","深谷ねぎ","川越いも","武蔵野うどん"],places:["川越蔵造りの町並み","鉄道博物館","長瀞","羊山公園"]},
+"千葉県":{people:["木村拓哉","YOSHIKI","相葉雅紀","マツコ・デラックス"],foods:["落花生","なめろう","勝浦タンタンメン","梨"],places:["東京ディズニーリゾート","成田山新勝寺","鴨川シーワールド","鋸山"]},
+"東京都":{people:["星野源","松任谷由実","小沢健二","ビートたけし"],foods:["深川めし","もんじゃ焼き","江戸前寿司","人形焼"],places:["東京タワー","浅草寺","渋谷スクランブル交差点","上野公園"]},
+"神奈川県":{people:["桑田佳祐","小田和正","ゆず","いきものがかり"],foods:["しらす丼","サンマーメン","崎陽軒シウマイ","横須賀海軍カレー"],places:["横浜中華街","鎌倉大仏","江の島","箱根温泉"]},
+"新潟県":{people:["小林幸子","HIKAKIN","渡辺謙","Negicco"],foods:["へぎそば","笹団子","タレカツ丼","南蛮エビ"],places:["佐渡島","苗場スキー場","清津峡","弥彦神社"]},
+"富山県":{people:["柴田理恵","西村まさ彦","立川志の輔","室井滋"],foods:["ます寿司","白えび","富山ブラック","ホタルイカ"],places:["黒部ダム","立山黒部アルペンルート","五箇山","雨晴海岸"]},
+"石川県":{people:["中田ヤスタカ","浜辺美波","松井秀喜","ダンディ坂野"],foods:["金沢カレー","のどぐろ","治部煮","加賀棒茶"],places:["兼六園","ひがし茶屋街","金沢21世紀美術館","千里浜なぎさドライブウェイ"]},
+"福井県":{people:["五木ひろし","高橋愛","道端アンジェリカ","津田寛治"],foods:["越前そば","ソースカツ丼","越前がに","羽二重餅"],places:["東尋坊","永平寺","恐竜博物館","三方五湖"]},
+"山梨県":{people:["レミオロメン","中田英寿","武藤敬司","田原俊彦"],foods:["ほうとう","信玄餅","吉田のうどん","鳥もつ煮"],places:["富士山","河口湖","昇仙峡","忍野八海"]},
+"長野県":{people:["久石譲","美川憲一","もう中学生","藤森慎吾"],foods:["信州そば","おやき","野沢菜","山賊焼き"],places:["善光寺","上高地","松本城","軽井沢"]},
+"岐阜県":{people:["LiSA","清春","伊藤英明","綾野剛"],foods:["飛騨牛","鶏ちゃん","五平餅","朴葉味噌"],places:["白川郷","下呂温泉","岐阜城","高山古い町並み"]},
+"静岡県":{people:["久保田利伸","広瀬すず","ピンク・レディー","長澤まさみ"],foods:["うなぎ","静岡おでん","富士宮やきそば","桜えび"],places:["富士山","熱海温泉","三保の松原","伊豆半島"]},
+"愛知県":{people:["スキマスイッチ","SEAMO","浅田真央","舘ひろし"],foods:["味噌カツ","ひつまぶし","手羽先","きしめん"],places:["名古屋城","熱田神宮","ジブリパーク","犬山城"]},
+"三重県":{people:["西野カナ","平井堅","鳥羽一郎","吉田沙保里"],foods:["松阪牛","伊勢うどん","赤福","てこね寿司"],places:["伊勢神宮","鳥羽水族館","ナガシマスパーランド","熊野古道"]},
+"滋賀県":{people:["西川貴教","UVERworld","高橋メアリージュン","武豊"],foods:["近江牛","鮒寿司","赤こんにゃく","近江ちゃんぽん"],places:["琵琶湖","彦根城","延暦寺","ラ コリーナ近江八幡"]},
+"京都府":{people:["倖田來未","くるり","10-FEET","佐々木蔵之介"],foods:["湯豆腐","八ツ橋","京漬物","にしんそば"],places:["清水寺","金閣寺","伏見稲荷大社","嵐山"]},
+"大阪府":{people:["aiko","槇原敬之","コブクロ黒田俊介","絢香"],foods:["たこ焼き","お好み焼き","串カツ","かすうどん"],places:["大阪城","通天閣","道頓堀","あべのハルカス"]},
+"兵庫県":{people:["あいみょん","平松愛理","戸田恵梨香","北川景子"],foods:["明石焼き","神戸牛","そばめし","いかなごのくぎ煮"],places:["姫路城","有馬温泉","神戸港","竹田城跡"]},
+"奈良県":{people:["堂本剛","明石家さんま","城島茂","加護亜依"],foods:["柿の葉寿司","三輪そうめん","奈良漬","茶粥"],places:["東大寺","奈良公園","春日大社","法隆寺"]},
+"和歌山県":{people:["坂本冬美","HYDE","岡本玲","小西博之"],foods:["和歌山ラーメン","梅干し","めはり寿司","みかん"],places:["高野山","白浜温泉","那智の滝","アドベンチャーワールド"]},
+"鳥取県":{people:["Official髭男dism藤原聡","水木しげる","イモトアヤコ","沢田研二"],foods:["松葉がに","梨","牛骨ラーメン","とうふちくわ"],places:["鳥取砂丘","水木しげるロード","三徳山投入堂","白兎神社"]},
+"島根県":{people:["竹内まりや","Saucy Dog石原慎也","Omoinotake","江角マキコ"],foods:["出雲そば","しじみ汁","赤てん","ぼてぼて茶"],places:["出雲大社","石見銀山","宍道湖","松江城"]},
+"岡山県":{people:["稲葉浩志","藤井風","オダギリジョー","千鳥"],foods:["きびだんご","デミカツ丼","ままかり","えびめし"],places:["後楽園","倉敷美観地区","岡山城","吉備津神社"]},
+"広島県":{people:["奥田民生","Perfume","浜田省吾","有吉弘行"],foods:["広島お好み焼き","牡蠣","尾道ラーメン","もみじ饅頭"],places:["厳島神社","原爆ドーム","尾道","大和ミュージアム"]},
+"山口県":{people:["山崎まさよし","吉田松陰","松田優作","道重さゆみ"],foods:["ふぐ","瓦そば","外郎","岩国寿司"],places:["角島大橋","錦帯橋","秋芳洞","元乃隅神社"]},
+"徳島県":{people:["米津玄師","アンジェラ・アキ","大杉漣","チャットモンチー"],foods:["徳島ラーメン","阿波尾鶏","すだち","鳴門金時"],places:["鳴門の渦潮","大塚国際美術館","祖谷のかずら橋","阿波おどり会館"]},
+"香川県":{people:["要潤","松本明子","南原清隆","中野美奈子"],foods:["讃岐うどん","骨付鳥","しょうゆ豆","和三盆"],places:["栗林公園","小豆島","金刀比羅宮","父母ヶ浜"]},
+"愛媛県":{people:["Superfly越智志帆","水樹奈々","友近","藤岡弘、"],foods:["鯛めし","じゃこ天","みかん","今治焼豚玉子飯"],places:["道後温泉","松山城","しまなみ海道","下灘駅"]},
+"高知県":{people:["広末涼子","岡本真夜","三山ひろし","島崎和歌子"],foods:["カツオのたたき","皿鉢料理","芋けんぴ","鍋焼きラーメン"],places:["桂浜","高知城","四万十川","室戸岬"]},
+"福岡県":{people:["椎名林檎","浜崎あゆみ","MISIA","タモリ"],foods:["もつ鍋","博多ラーメン","明太子","水炊き"],places:["太宰府天満宮","中洲","門司港レトロ","糸島"]},
+"佐賀県":{people:["はなわ","松雪泰子","江頭2:50","優木まおみ"],foods:["佐賀牛","シシリアンライス","呼子のイカ","小城羊羹"],places:["吉野ヶ里遺跡","嬉野温泉","武雄温泉","祐徳稲荷神社"]},
+"長崎県":{people:["福山雅治","さだまさし","MISIA","役所広司"],foods:["長崎ちゃんぽん","皿うどん","カステラ","トルコライス"],places:["ハウステンボス","グラバー園","軍艦島","稲佐山"]},
+"熊本県":{people:["森高千里","WANIMA","水前寺清子","内村光良"],foods:["馬刺し","熊本ラーメン","辛子蓮根","いきなり団子"],places:["熊本城","阿蘇山","黒川温泉","天草"]},
+"大分県":{people:["南こうせつ","指原莉乃","ユースケ・サンタマリア","竹内力"],foods:["とり天","だんご汁","関あじ関さば","別府冷麺"],places:["別府温泉","由布院","宇佐神宮","九重夢大吊橋"]},
+"宮崎県":{people:["コブクロ小渕健太郎","今井美樹","堺雅人","蛯原友里"],foods:["チキン南蛮","宮崎牛","冷や汁","地鶏炭火焼"],places:["高千穂峡","青島","鵜戸神宮","サンメッセ日南"]},
+"鹿児島県":{people:["長渕剛","AI","中島美嘉","サンシャイン池崎"],foods:["黒豚","さつま揚げ","白くま","鶏飯"],places:["桜島","屋久島","指宿温泉","仙巌園"]},
+"沖縄県":{people:["安室奈美恵","BEGIN","HY","ORANGE RANGE"],foods:["ゴーヤーチャンプルー","沖縄そば","タコライス","サーターアンダギー"],places:["首里城","美ら海水族館","国際通り","古宇利島"]}
+};
+const PREFS=Object.keys(DATA),doneKey="wadai_done_history";let currentPref="",questions=[],answers=[],qIndex=0,selected="";
+function $(id){return document.getElementById(id)}
+function shuffle(arr){return [...arr].sort(()=>Math.random()-0.5)}
+function getDone(){return JSON.parse(localStorage.getItem(doneKey)||"[]")}
+function setDone(v){localStorage.setItem(doneKey,JSON.stringify(v))}
+function updateProgress(){const done=getDone();$("progressText").innerHTML=`完了：<b>${done.length}</b> / ${PREFS.length}<br>全問正解した都道府県は次回から出題されません`}
+function startQuiz(){const done=getDone(),targets=PREFS.filter(p=>!done.includes(p));if(!targets.length){alert("全都道府県完了です。履歴をリセットしてください。");return}currentPref=targets[Math.floor(Math.random()*targets.length)];questions=[makeQuestion("people","有名人"),makeQuestion("foods","食べ物"),makeQuestion("places","名所")];answers=[];qIndex=0;show("quiz");renderQuiz()}
+function getWrongChoices(type,correct,pref){let pool=[];Object.keys(DATA).forEach(p=>{if(p!==pref)pool=pool.concat(DATA[p][type])});pool=[...new Set(pool)].filter(v=>v!==correct);return shuffle(pool).slice(0,3)}
+function makeQuestion(type,label){const list=DATA[currentPref][type],correct=list[Math.floor(Math.random()*list.length)],wrongChoices=getWrongChoices(type,correct,currentPref);return{type,label,correct,choices:shuffle([correct,...wrongChoices]),extras:list.filter(v=>v!==correct).slice(0,3)}}
+function renderQuiz(){selected="";$("nextBtn").disabled=true;$("nextBtn").classList.remove("active");const q=questions[qIndex];$("quizPref").textContent=`${currentPref} / 第${qIndex+1}問`;$("questionText").textContent=`${currentPref}の${q.label}として正しいものは？`;$("choices").innerHTML=q.choices.map(v=>`<button class="choice" onclick="selectChoice(this,'${String(v).replace(/'/g,"\\'")}')">${v}</button>`).join("")}
+function selectChoice(btn,val){selected=val;document.querySelectorAll(".choice").forEach(el=>el.classList.remove("selected"));btn.classList.add("selected");$("nextBtn").disabled=false;$("nextBtn").classList.add("active")}
+function nextQuestion(){const q=questions[qIndex];answers.push({q,user:selected,ok:selected===q.correct});qIndex++;if(qIndex<questions.length)renderQuiz();else showResult()}
+function showResult(){
+const correctCount=answers.filter(a=>a.ok).length;
+const totalCount=answers.length;
+const scoreDeg=Math.round((correctCount/totalCount)*360);
+const allOk=answers.every(a=>a.ok);
+if(allOk){const done=getDone();if(!done.includes(currentPref)){done.push(currentPref);setDone(done)}}
+$("resultSummary").innerHTML=`<div class="card score-card"><div class="result-pref">${currentPref}</div><div class="score-wrap"><div class="score-circle" style="--score-deg:${scoreDeg}deg"><div class="score-inner"><div class="score-number">${correctCount}/${totalCount}</div><div class="score-label">正解</div></div></div></div><div class="score-message">${allOk?'全問正解！この都道府県は完了になりました。':'今回は未完了です。もう一度挑戦できます。'}</div></div>`;
+$("resultList").innerHTML=answers.map((a,i)=>`<div class="card"><div class="${a.ok?'result-ok':'result-ng'}">${i+1}. ${a.q.label}：${a.ok?'正解':'不正解'}</div><p>あなたの回答：<b>${a.user}</b></p>${a.ok?'':`<p>正しい回答：<b>${a.q.correct}</b></p>`}<div class="info"><h4>他にも以下の${a.q.label}があります</h4><ul>${a.q.extras.map(v=>`<li>${v}</li>`).join("")}</ul></div></div>`).join("");
+show("result");updateProgress()
+}
+function goHome(){show("home");updateProgress()}
+function resetHistory(){if(confirm("履歴をリセットしますか？")){localStorage.removeItem(doneKey);updateProgress();alert("リセットしました")}}
+function show(id){["home","quiz","result"].forEach(v=>$(v).classList.add("hidden"));$(id).classList.remove("hidden")}
+updateProgress();show("home");
+</script>
+</body>
+</html>
